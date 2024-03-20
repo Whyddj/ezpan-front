@@ -13,6 +13,7 @@ const router = createRouter({
             path: "/",
             name: "Framework",
             component: () => import("@/views/Framework.vue"),
+            meta: { requireAuth: true },
             children: [
                 {
                     path: "/",

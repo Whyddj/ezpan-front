@@ -63,9 +63,15 @@
 
 <script setup>
 import {getCurrentInstance, ref} from "vue";
+import SparkMD5 from "spark-md5"
 
 const {proxy} = getCurrentInstance();
 const chuckSize = 1024 * 1024 * 10; // 10M
+const api = {
+  upload: "/file/uploadFile",
+  checkBeforeUpload: "/file/checkBeforeUpload"
+}
+
 const STATUS = {
   emptyfile: {
     value: "emptyfile",
@@ -128,8 +134,12 @@ const addFile = async (file, filePid) => {
     fileItem.status = STATUS.emptyfile.value
     return
   }
-  let md5FileUid = await computeMd5(fileItem)
+  let md5FileUid = await computeMd5(fileItem) // await后面的代码会等待computeMd5执行完毕
   if (md5FileUid == null) {
+    return
+  }
+  let hasUpload = await checkBeforeUpload(md5FileUid) // 检查是否秒传
+  if (hasUpload) {
     return
   }
   uploadFile(md5FileUid)
@@ -147,7 +157,7 @@ const computeMd5 = (fileItem) => {
   let fileReader = new FileReader();
 
   // init fileItem
-  // fileItem.checksMd5 = []
+  fileItem.chunksMd5 = []
 
   let loadNext = () => {
     let start = currentChuck * chuckSize;
@@ -162,8 +172,8 @@ const computeMd5 = (fileItem) => {
       currentChuck++;
 
       // Save the md5 of each chunk
-      // let chunkMd5 = SparkMD5.ArrayBuffer.hash(e.target.result)
-      // resultFile.checksMd5.push(chunkMd5)
+      let chunkMd5 = SparkMD5.ArrayBuffer.hash(e.target.result)
+      resultFile.chunksMd5.push(chunkMd5)
 
       if (currentChuck < chucks) {
         console.log(`${file.name}第${currentChuck}个分片md5计算完成`)
@@ -174,7 +184,7 @@ const computeMd5 = (fileItem) => {
         spark.destroy()
         resultFile.md5Progress = 100
         resultFile.md5 = md5
-        resolve(fileItem.uid)
+        resolve(fileItem.uid) // resolve
       }
     }
     fileReader.onerror = () => {
@@ -192,7 +202,36 @@ const getFileByUid = (uid) => {
   return fileList.value.find(item => item.uid === uid)
 }
 
-const uploadFile = (uid, chunkIndex) => {
+const checkBeforeUpload = async (uid) => {
+  let currentFile = getFileByUid(uid)
+  const file = currentFile.file
+  let checkResult = await proxy.Request({
+    url: api.checkBeforeUpload,
+    params: {
+      fileName: file.name,
+      filePid: currentFile.filePid,
+      fileMd5: currentFile.md5
+    },
+    errorCallBack: (error) => {
+      currentFile.status = STATUS.fail.value
+      currentFile.errorMsg = error
+    },
+  })
+  if (checkResult == null) {
+    return null
+  }
+  if (checkResult.data.status === STATUS.upload_seconds.value) {
+    currentFile.status = STATUS[checkResult.data.status].value
+    currentFile.uploadProgress = 100
+    emit("uploadCallback")
+    return true
+  }
+  currentFile.fileId = uploadResult.data.fileId
+  return false
+}
+
+const emit = defineEmits(["uploadCallback"])
+const uploadFile = async (uid, chunkIndex) => {
   chunkIndex = chunkIndex ? chunkIndex : 0
   // 分片
   let currentFile = getFileByUid(uid)
@@ -209,12 +248,49 @@ const uploadFile = (uid, chunkIndex) => {
     if (currentFile.pause) {
       break
     }
+    let start = i * chuckSize
+    let end = Math.min(start + chuckSize, file.size);
+    let chunkFile = file.slice(start, end) // 切片文件
+    let uploadResult = await proxy.Request({
+      url: api.upload,
+      showLoading: false,
+      dataType: "file",
+      params: {
+        file: chunkFile,
+        fileName: file.name,
+        fileMd5: currentFile.chunksMd5[i], // 每个分片的md5
+        chunkIndex: i,
+        chunks: chunks,
+        fileId: currentFile.fileId,
+        filePid: currentFile.filePid
+      },
+      showError: false,
+      errorCallBack: (error) => {
+        currentFile.status = STATUS.fail.value
+        currentFile.errorMsg = error
+      },
+      onUploadProgress: (progressEvent) => {
+        let loaded = Math.min(progressEvent.loaded, end - start)
+        currentFile.uploadSize = i * chuckSize + loaded
+        currentFile.uploadProgress = Math.floor(currentFile.uploadSize / fileSize * 100)
+      }
+    })
 
+    if (uploadResult == null) {
+      break
+    }
+
+    currentFile.fileId = uploadResult.data.fileId
+    currentFile.status = STATUS[uploadResult.data.status].value
+    currentFile.chuckIndex = i
+    if (uploadResult.data.status === STATUS.upload_finish.value || uploadResult.data.status === STATUS.upload_seconds.value) {
+      currentFile.uploadProgress = 100
+      emit("uploadCallback")
+      break
+    }
   }
-
 }
 </script>
-
 
 <style scoped lang="scss">
 .uploader-panel {

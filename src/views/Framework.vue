@@ -12,7 +12,7 @@
             <span class="iconfont icon-transfer"></span>
           </template>
           <template #default>
-            <Uploader ref="uploaderRef"></Uploader>
+            <Uploader ref="uploaderRef" @uploadCallback="uploadCallbackHandler"></Uploader>
           </template>
         </el-popover>
 
@@ -102,6 +102,12 @@ const addFile = (data) => {
  
 const timestamp = ref(0)
 const userInfo = ref(proxy.VueCookies.get("userInfo"))
+
+const uploadCallbackHandler = (data) => {
+  nextTick(() => {
+    // TODO 更新用户空间使用情况
+  })
+}
 
 const menus = [
   {
