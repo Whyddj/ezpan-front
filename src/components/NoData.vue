@@ -1,7 +1,7 @@
 <template>
   <div class="no-data">
     <div>
-      <Icon type="no_data" :width="120" fit="fill"/>
+      <Icon :width="120" fit="fill" iconName="no_data"/>
     </div>
     <div class="msg">{{ msg }}</div>
   </div>
@@ -11,7 +11,10 @@
 const props = defineProps({
   msg: {
     type: String,
-  }
+  },
+  iconName: {
+    type: String,
+  },
 })
 </script>
 

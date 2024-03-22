@@ -82,7 +82,8 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     const userInfo = VueCookies.get("userInfo");
     if (to.meta.requireAuth && !userInfo) {
-        router.push("/login?redirectUrl=" + encodeURI(to.path));
+        // router.push("/login?redirectUrl=" + encodeURI(from.path));
+        router.push("/login?");
     }
     next();
 })

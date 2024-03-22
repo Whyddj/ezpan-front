@@ -210,7 +210,8 @@ const checkBeforeUpload = async (uid) => {
     params: {
       fileName: file.name,
       filePid: currentFile.filePid,
-      fileMd5: currentFile.md5
+      fileMd5: currentFile.md5,
+      fileSize: file.size
     },
     errorCallBack: (error) => {
       currentFile.status = STATUS.fail.value
@@ -220,13 +221,14 @@ const checkBeforeUpload = async (uid) => {
   if (checkResult == null) {
     return null
   }
+
   if (checkResult.data.status === STATUS.upload_seconds.value) {
     currentFile.status = STATUS[checkResult.data.status].value
     currentFile.uploadProgress = 100
     emit("uploadCallback")
     return true
   }
-  currentFile.fileId = uploadResult.data.fileId
+  currentFile.fileId = checkResult.data.fileId
   return false
 }
 
@@ -235,6 +237,7 @@ const uploadFile = async (uid, chunkIndex) => {
   chunkIndex = chunkIndex ? chunkIndex : 0
   // 分片
   let currentFile = getFileByUid(uid)
+  currentFile.status = STATUS.uploading.value
   const file = currentFile.file
   const fileSize = currentFile.totalSize
   const chunks = Math.ceil(fileSize / chuckSize)
@@ -269,7 +272,7 @@ const uploadFile = async (uid, chunkIndex) => {
         currentFile.status = STATUS.fail.value
         currentFile.errorMsg = error
       },
-      onUploadProgress: (progressEvent) => {
+      onUploadProgressCallback: (progressEvent) => {
         let loaded = Math.min(progressEvent.loaded, end - start)
         currentFile.uploadSize = i * chuckSize + loaded
         currentFile.uploadProgress = Math.floor(currentFile.uploadSize / fileSize * 100)
