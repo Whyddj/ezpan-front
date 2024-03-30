@@ -6,8 +6,9 @@
         <div class="name">EzPan</div>
       </div>
       <div class="right-panel">
-        <el-popover :width="800" trigger="click" v-model:visible="showUploader" :offset="20" transition="none" :hide-after="0"
-          :popper-style="{ padding: '0px' }">
+        <el-popover :width="800" trigger="click" v-model:visible="showUploader" :offset="20" transition="none"
+                    :hide-after="0"
+                    :popper-style="{ padding: '0px' }">
           <template #reference>
             <span class="iconfont icon-transfer"></span>
           </template>
@@ -19,8 +20,8 @@
         <el-dropdown>
           <div class="user-info">
             <div class="avatar">
-              <Avatar :userId="userInfo.userId" :avatar="userInfo.avatar" 
-              :timestamp="timestamp" :width="46"></Avatar>
+              <Avatar :userId="userInfo.userId" :avatar="userInfo.avatar"
+                      :timestamp="timestamp" :width="46"></Avatar>
             </div>
             <span class="nick-name">{{ userInfo.nickName }}</span>
           </div>
@@ -38,16 +39,16 @@
       <!-- 左侧菜单 -->
       <div class="left-sider">
         <div class="menu-list">
-          <div @click="jump(item)" :class="['menu-item', item.menuCode == currentMenu.menuCode ? 'active' : '']"
-            v-for="item in menus">
+          <div @click="jump(item)" :class="['menu-item', item.menuCode === currentMenu.menuCode ? 'active' : '']"
+               v-for="item in menus">
             <div :class="['iconfont', 'icon-' + item.icon]"></div>
             <div class="text">{{ item.name }}</div>
           </div>
         </div>
         <!-- 子菜单 -->
         <div class="menu-sub-list">
-          <div @click="jump(sub)" :class="['menu-item-sub', currentPath == sub.path ? 'active' : '']"
-            v-for="sub in currentMenu.children">
+          <div @click="jump(sub)" :class="['menu-item-sub', currentPath === sub.path ? 'active' : '']"
+               v-for="sub in currentMenu.children">
             <span :class="['iconfont', 'icon-' + sub.icon]" v-if="sub.icon"></span>
             <span class="text">{{ sub.name }}</span>
           </div>
@@ -58,15 +59,21 @@
           <div class="space-info">
             <div>空间使用</div>
             <div class="percent">
-              <el-progress :percentage="30" color="#05a1f5" text-inside></el-progress>
+              <el-progress :percentage="Math.floor(useSpaceInfo.useSpace / useSpaceInfo.totalSpace * 10000) / 100"
+                           color="#409eff"></el-progress>
+            </div>
+            <div class="space-use">
+              <div class="use">
+                {{ proxy.Utils.size2Str(useSpaceInfo.useSpace) }} / {{ proxy.Utils.size2Str(useSpaceInfo.totalSpace) }}
+              </div>
+              <div class="iconfont icon-refresh" @click="getUseSpace"></div>
             </div>
           </div>
         </div>
       </div>
       <div class="body-content">
-        <!--文件列表-->
         <router-view v-slot="{ Component }">
-          <component :is="Component" @addFile="addFile"></component>
+          <component ref="routerViewRef" :is="Component" @addFile="addFile" @reload="getUseSpace"></component>
         </router-view>
       </div>
     </div>
@@ -79,15 +86,17 @@
 import UpdateAvatar from './UpdateAvatar.vue';
 import UpdatePassword from './UpdatePassword.vue';
 
-import { ref, reactive, getCurrentInstance, nextTick, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {ref, reactive, getCurrentInstance, nextTick, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import Uploader from "@/views/main/Uploader.vue";
-const { proxy } = getCurrentInstance()
+
+const {proxy} = getCurrentInstance()
 const route = useRoute()
 const router = useRouter()
 
 const api = {
-  logout: "logout"
+  logout: "/logout",
+  getUseSpace: "/getUserSpace",
 }
 
 const showUploader = ref(false)
@@ -99,13 +108,15 @@ const addFile = (data) => {
   showUploader.value = true
   uploaderRef.value.addFile(file, filePid) // 调用子组件的方法
 }
- 
+
 const timestamp = ref(0)
 const userInfo = ref(proxy.VueCookies.get("userInfo"))
 
+const routerViewRef = ref()
 const uploadCallbackHandler = (data) => {
   nextTick(() => {
-    // TODO 更新用户空间使用情况
+    routerViewRef.value.reload()
+    getUseSpace()
   })
 }
 
@@ -227,7 +238,7 @@ watch(() => route, (newVal, oldVal) => {
   if (newVal.meta.menuCode) {
     setMenu(newVal.meta.menuCode, newVal.path)
   }
-}, { immediate: true, deep: true })
+}, {immediate: true, deep: true})
 
 
 // 修改头像
@@ -260,6 +271,21 @@ const logout = async () => {
     router.push("/login")
   })
 }
+
+// 使用空间
+const useSpaceInfo = ref({useSpace: 0, totalSpace: 1})
+const getUseSpace = async () => {
+  let result = await proxy.Request({
+    url: api.getUseSpace,
+    showLoading: false
+  })
+  if (!result) {
+    return
+  }
+  useSpaceInfo.value = result.data
+}
+// 进入页面获取空间使用情况
+getUseSpace()
 </script>
 
 <style lang="scss" scoped>
@@ -406,15 +432,14 @@ const logout = async () => {
       .space-info {
         position: absolute;
         bottom: 10px;
-        width: 100px;
-        padding: 0px 5px;
+        width: 200px;
+        padding: 0 5px;
 
         .percent {
           padding-right: 10px;
-
         }
 
-        .space-user {
+        .space-use {
           margin-top: 5px;
           color: #7e7e7e;
           display: flex;

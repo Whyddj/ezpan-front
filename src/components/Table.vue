@@ -2,7 +2,7 @@
   <div>
     <el-table ref="dataTable" :data="dataSource.list || []" :height="tableHeight" :stripe="options.stripe"
               :border="options.border" header-row-class-name="table-header-row" highlight-current-row
-              @row-click="handleSelectionChange" @selection-change="handleSelectionChange">
+              @row-select="handleSelectionChange" @selection-change="handleSelectionChange">
       <!--selection选择框-->
       <el-table-column v-if="options.selectType && options.selectType === 'checkbox'" type="selection" width="50"
                        align="center"></el-table-column>

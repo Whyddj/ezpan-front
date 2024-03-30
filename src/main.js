@@ -9,6 +9,10 @@ import '@/assets/icon/iconfont.css'
 import '@/assets/base.scss'
 // cookies
 import VueCookies from 'vue-cookies'
+//代码高亮
+import HljsVuePlugin from '@highlightjs/vue-plugin'
+import 'highlight.js/styles/atom-one-light.css'
+import 'highlight.js/lib/common'
 
 // 自定义组件
 import Dialog from '@/components/Dialog.vue'
@@ -16,6 +20,10 @@ import Avatar from '@/components/Avatar.vue'
 import Table from '@/components/Table.vue'
 import Icon from '@/components/Icon.vue'
 import NoData from '@/components/NoData.vue'
+import FolderSelect from '@/components/FolderSelect.vue'
+import Navigation from "@/components/Navigation.vue";
+import Preview from "@/components/preview/Preview.vue";
+import Window from "@/components/Window.vue";
 
 import Verify from '@/utils/Verify'
 import Request from '@/utils/Request'
@@ -26,12 +34,17 @@ import Utils from '@/utils/Utils'
 const app = createApp(App)
 app.use(ElementPlus)
 app.use(router)
+app.use(HljsVuePlugin)
 
 app.component('Dialog', Dialog)
 app.component('Avatar', Avatar)
 app.component('Table', Table)
 app.component('Icon', Icon)
 app.component('NoData', NoData)
+app.component('FolderSelect', FolderSelect)
+app.component('Navigation', Navigation)
+app.component('Preview', Preview)
+app.component('Window', Window)
 
 app.config.globalProperties.Verify = Verify
 app.config.globalProperties.Request = Request

@@ -217,6 +217,7 @@ const checkBeforeUpload = async (uid) => {
       currentFile.status = STATUS.fail.value
       currentFile.errorMsg = error
     },
+    showLoading: false
   })
   if (checkResult == null) {
     return null
