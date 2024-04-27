@@ -259,7 +259,7 @@ const saveOneShare = (row) => {
 
 // 取消分享
 const cancelShare = async () => {
-  proxy.Comfirm("确定取消分享吗？", async () => {
+  proxy.Confirm("确定取消分享吗？", async () => {
     let result = await proxy.Request({
       url: api.cancelShare,
       params: {
